@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Policy & Control GAP Analysis</title>
+  <style>
+    body { font-family: Arial; margin: 30px; max-width: 900px; }
+    .card { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+    input, textarea { width: 100%; padding: 10px; margin-top: 8px; }
+    button { padding: 10px 16px; margin-top: 10px; cursor: pointer; }
+    small { color: #555; }
+  </style>
+</head>
+<body>
+  <h2>AI Risk & Compliance Copilot</h2>
+
+  <div class="card">
+    <h3>1) Upload documents (PDF/TXT)</h3>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+      <input type="file" name="files" multiple />
+      <button type="submit">Upload & Rebuild Index</button>
+      <p><small>Uploads into <code>data/docs</code> and rebuilds FAISS index.</small></p>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>2) Analyze a requirement</h3>
+    <form action="/analyze" method="post">
+      <label>Requirement / Question</label>
+      <textarea name="requirement" rows="4" placeholder="e.g., Incident response plan must define roles, SLAs, and testing cadence."></textarea>
+      <button type="submit">Run Analysis</button>
+    </form>
+  </div>
+
+</body>
+</html>
