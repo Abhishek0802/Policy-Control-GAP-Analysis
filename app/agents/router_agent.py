@@ -1,29 +1,45 @@
-from pydantic import BaseModel
 from typing import Literal
+from pydantic import BaseModel, Field
 from app.llm.openai_client import llm
 
-class GapRoute(BaseModel):
-    route: Literal["KEEP_GAP", "DROP_GAP"]
-    confidence: float
+
+class RouterDecision(BaseModel):
+    route: Literal["KEEP_GAP", "DROP_GAP", "NO_GAP_HIGH_RISK"]
+    confidence: float = Field(..., ge=0.0, le=1.0)
     reason: str
 
-def route_gap(requirement, evidence):
+
+def router_agent(state):
     prompt = f"""
-You are a compliance triage agent.
+You are a Big-4 style Router/Triage Agent.
+
+Goal: Decide what to do with the requirement based on evidence and context.
+
+Engagement scope: {state.scope}
 
 Requirement:
-{requirement}
+{state.requirement}
 
-Evidence:
-{evidence}
+Evidence (policy/framework snippets):
+{state.evidence}
 
-Decide:
-- KEEP_GAP if materially affects risk or compliance
-- DROP_GAP if cosmetic or non-impactful
+Decide exactly ONE route:
+1) KEEP_GAP:
+   - There is a meaningful control gap worth reporting.
+2) DROP_GAP:
+   - Finding is cosmetic/redundant/out-of-scope and not decision-relevant.
+3) NO_GAP_HIGH_RISK:
+   - No clear compliance gap, but contextual risk is still high and must be evaluated (e.g., threat environment, operational weakness).
 
-Return JSON with:
-route, confidence (0-1), reason
+Return STRICT JSON:
+{{
+  "route": "KEEP_GAP" | "DROP_GAP" | "NO_GAP_HIGH_RISK",
+  "confidence": 0 to 1,
+  "reason": "one short sentence"
+}}
 """
-
-    response = llm.with_structured_output(GapRoute).invoke(prompt)
-    return response
+    decision = llm.with_structured_output(RouterDecision).invoke(prompt)
+    state.gap_route = decision.route
+    state.gap_confidence = decision.confidence
+    state.gap_reason = decision.reason
+    return state

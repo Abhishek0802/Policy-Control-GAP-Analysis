@@ -1,6 +1,7 @@
 langchain
 langgraph
+langchain-openai
+langchain-community
 faiss-cpu
-openai
 pydantic
 python-dotenv
