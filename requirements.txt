@@ -1,1 +1,6 @@
+langchain
+langgraph
+faiss-cpu
+openai
+pydantic
 python-dotenv
