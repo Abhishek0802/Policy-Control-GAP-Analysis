@@ -1,6 +1,7 @@
 from typing import Literal
 from pydantic import BaseModel, Field
-from app.llm.openai_client import llm
+from langchain_openai import ChatOpenAI
+from app.config import CHAT_MODEL
 
 
 class RouterDecision(BaseModel):
@@ -38,6 +39,7 @@ Return STRICT JSON:
   "reason": "one short sentence"
 }}
 """
+    llm = ChatOpenAI(model=CHAT_MODEL, temperature=0.2)
     decision = llm.with_structured_output(RouterDecision).invoke(prompt)
     state.gap_route = decision.route
     state.gap_confidence = decision.confidence

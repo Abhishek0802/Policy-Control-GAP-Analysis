@@ -24,7 +24,7 @@ def load_faiss_retriever(k: int = 6):
     # Important: allow_dangerous_deserialization is often required depending on version
     vectorstore = FAISS.load_local(
         FAISS_INDEX_PATH,
-        embeddings,
+        lambda text: embeddings.embed_query(text),
         allow_dangerous_deserialization=True,
     )
     return vectorstore.as_retriever(search_kwargs={"k": k})

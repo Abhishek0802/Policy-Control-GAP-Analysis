@@ -9,6 +9,8 @@ from app.graph.flow import app as graph_app
 from app.rag.retriever import load_faiss_retriever, retrieve_evidence
 from app.rag.ingest import build_faiss_from_folder  # you will add this if not present
 
+import logging
+logging.basicConfig(level=logging.INFO)
 
 UPLOAD_FOLDER = "data/docs"
 ALLOWED_EXTENSIONS = {"pdf", "txt"}
@@ -60,7 +62,8 @@ def analyze():
         return render_template("result.html", error="Requirement cannot be empty.")
 
     retriever = load_faiss_retriever()
-    evidence = retrieve_evidence(retriever, requirement)
+    flask_app.logger.info("DEBUG requirement type=%s val=%s", type(requirement), requirement[:80])
+    evidence = retrieve_evidence(str(requirement))
 
     state = AppState(
         requirement=requirement,
@@ -71,7 +74,8 @@ def analyze():
     out = graph_app.invoke(state)
 
     # Last audit entry (your flow logs to audit_log)
-    last = out.audit_log[-1] if out.audit_log else {}
+    audit_log = out.get("audit_log", []) if isinstance(out, dict) else getattr(out, "audit_log", [])
+    last = audit_log[-1] if audit_log else {}
 
     return render_template(
         "result.html",
