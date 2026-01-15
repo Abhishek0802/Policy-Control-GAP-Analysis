@@ -11,7 +11,7 @@ class AppState(BaseModel):
     # -------- Inputs --------
     requirement: str
     evidence: str = ""
-    scope: str = "Policy & Control Gap Analysis"
+    scope: str
 
     # -------- Router decision (Gap triage) --------
     gap_route: Optional[GapRoute] = None

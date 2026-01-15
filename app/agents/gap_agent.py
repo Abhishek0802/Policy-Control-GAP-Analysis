@@ -1,6 +1,7 @@
 from typing import Literal
 from pydantic import BaseModel
-from app.llm.openai_client import llm
+from langchain_openai import ChatOpenAI
+from app.config import CHAT_MODEL
 
 
 class GapFinding(BaseModel):
@@ -28,6 +29,7 @@ Return STRICT JSON:
   "recommendation": "..."
 }}
 """
+    llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0.2)
     out = llm.with_structured_output(GapFinding).invoke(prompt)
     state.gap_summary = out.gap_summary
     state.gap_severity = out.severity

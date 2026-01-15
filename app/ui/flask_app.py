@@ -63,7 +63,7 @@ def analyze():
 
     retriever = load_faiss_retriever()
     flask_app.logger.info("DEBUG requirement type=%s val=%s", type(requirement), requirement[:80])
-    evidence = retrieve_evidence(str(requirement))
+    evidence = retrieve_evidence(str(requirement)) # Get top K documents supporting requirements
 
     state = AppState(
         requirement=requirement,
