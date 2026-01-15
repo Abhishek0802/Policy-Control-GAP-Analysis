@@ -34,7 +34,7 @@ def build_faiss_from_folder(folder: str, save_path: str):
     if not texts:
         raise ValueError(f"No PDF/TXT documents found in: {folder}")
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
     docs = splitter.create_documents(texts)
 
     db = FAISS.from_documents(docs, embeddings)

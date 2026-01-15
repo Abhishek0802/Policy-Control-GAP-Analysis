@@ -30,12 +30,12 @@ def load_faiss_retriever(k: int = 6):
     return vectorstore.as_retriever(search_kwargs={"k": k})
 
 
-def retrieve_evidence(query: str, k: int = 6) -> str:
+def retrieve_evidence(query: str, k: int = 3) -> str:
     """
     Convenience helper: loads retriever and returns joined text context.
     """
     retriever = load_faiss_retriever(k=k)
-    docs = retriever.get_relevant_documents(query)
+    docs = retriever.get_relevant_documents(query) ## Requirement is passed here
 
     # Join as context
     chunks = []

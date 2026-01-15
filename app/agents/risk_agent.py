@@ -1,6 +1,8 @@
 from typing import Literal
 from pydantic import BaseModel, Field
-from app.llm.openai_client import llm
+from langchain_openai import ChatOpenAI
+from app.config import CHAT_MODEL
+
 
 
 class RiskEntry(BaseModel):
@@ -46,6 +48,7 @@ Return STRICT JSON:
   "recommended_control": "..."
 }}
 """
+    llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0.2)
     risk = llm.with_structured_output(RiskEntry).invoke(prompt)
 
     state.risk_statement = risk.risk_statement
@@ -79,6 +82,7 @@ Return STRICT JSON:
   "reason": "one short sentence"
 }}
 """
+    llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0.2)
     decision = llm.with_structured_output(RiskDecision).invoke(prompt)
 
     state.risk_route = decision.route
