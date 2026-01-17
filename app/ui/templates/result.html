@@ -2,43 +2,66 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Result</title>
+  <title>Analysis Results</title>
   <style>
     body { font-family: Arial; margin: 30px; max-width: 900px; }
     .box { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
-    pre { background: #f7f7f7; padding: 12px; overflow:auto; }
+    .status { font-weight: bold; }
+    pre { background: #f7f7f7; padding: 12px; overflow: auto; }
     a { text-decoration: none; }
   </style>
 </head>
 <body>
+
   <p><a href="/">← Back</a></p>
 
   {% if error %}
-    <div class="box"><b>Error:</b> {{ error }}</div>
-  {% endif %}
-
-  {% if mode == "upload" %}
     <div class="box">
-      <h3>Upload Complete</h3>
-      <p>Saved files: <b>{{ saved }}</b></p>
-      <p>FAISS index rebuilt.</p>
+      <b>Error:</b> {{ error }}
     </div>
   {% endif %}
 
-  {% if mode == "analyze" %}
-    <div class="box">
-      <h3>Requirement</h3>
-      <pre>{{ requirement }}</pre>
-    </div>
+  {% if results %}
+    <h2>Policy Comparison Results</h2>
 
-    <div class="box">
-      <h3>Evidence Retrieved (FAISS)</h3>
-      <pre>{{ evidence }}</pre>
-    </div>
+    {% for r in results %}
+      <div class="box">
 
+        <h3>Requirement</h3>
+        <pre>{{ r.requirement }}</pre>
+
+        <p class="status">
+          Final Status: {{ r.status }}
+        </p>
+
+        {% if r.gap_summary %}
+          <h4>Gap Summary</h4>
+          <pre>{{ r.gap_summary }}</pre>
+        {% endif %}
+
+        {% if r.gap_severity %}
+          <p><b>Gap Severity:</b> {{ r.gap_severity }}</p>
+        {% endif %}
+
+        {% if r.risk_statement %}
+          <h4>Risk Statement</h4>
+          <pre>{{ r.risk_statement }}</pre>
+        {% endif %}
+
+        {% if r.rating %}
+          <p><b>Risk Rating:</b> {{ r.rating }}</p>
+        {% endif %}
+
+        {% if r.recommended_control %}
+          <h4>Recommended Control</h4>
+          <pre>{{ r.recommended_control }}</pre>
+        {% endif %}
+
+      </div>
+    {% endfor %}
+  {% else %}
     <div class="box">
-      <h3>Decision Output</h3>
-      <pre>{{ output | tojson(indent=2) }}</pre>
+      <p>No results to display.</p>
     </div>
   {% endif %}
 

@@ -13,6 +13,10 @@ class AppState(BaseModel):
     evidence: str = ""
     scope: str
 
+    interpreted_requirements: List[str] = []
+    approved_requirements: List[str] = []
+    human_review_done: bool = False
+
     # -------- Router decision (Gap triage) --------
     gap_route: Optional[GapRoute] = None
     gap_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
