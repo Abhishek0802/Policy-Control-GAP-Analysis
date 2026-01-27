@@ -1,65 +1,52 @@
-from typing import List, Dict
 import json
+import re
+from typing import Dict
 
+def interpret_new_document(llm, text: str) -> Dict:
+    prompt = f"""
+    You are a Policy Analysis Assistant. 
+    IMPORTANT: The text contains markers like , , etc. 
+    IGNORE these markers for section numbering. Use the ACTUAL headings (e.g., "1. Purpose", "2. Scope").
 
-def interpret_new_document(llm, text: str) -> List[Dict]:
+    TASK:
+    1. Extract Metadata: Title, Owner, Effective Date, and Scope[cite: 1, 2, 3, 5].
+    2. List Clauses: Identify every numbered policy section (e.g., 1 through 8)[cite: 6, 8, 10, 13, 16, 19, 22, 24].
+    3. Classify Themes: Provide a ONE-WORD theme for each.
+
+    JSON SCHEMA:
+    {{
+      "metadata": {{
+        "title": "...",
+        "owner": "...",
+        "effective_date": "...",
+        "applies_to": "..."
+      }},
+      "analysis": [
+        {{
+          "section_reference": "Section X (Use the policy's number, not the source ID)",
+          "exact_clause": "The full text of the section",
+          "theme": "One Word Theme"
+        }}
+      ]
+    }}
+
+    POLICY DOCUMENT:
+    {text}
     """
-    Interpret a policy document and extract PRACTICAL, auditable control candidates.
-    """
-
-    prompt = """
-You are a senior compliance auditor.
-
-Your task is to analyze the policy document below and identify ONLY statements
-that represent potential compliance controls.
-
-For EACH identified statement:
-1. Keep the ORIGINAL policy wording (do NOT rewrite into generic requirements)
-2. Classify the control maturity:
-   - INTENT_ONLY: high-level statement, not directly auditable
-   - PARTIAL_CONTROL: relevant but missing key enforcement details
-   - AUDIT_READY: clear, specific, and testable
-3. Identify what is missing to make it fully auditable.
-If rag_decision.include is false, copy missing_elements into rag_decision.blocking_factors.
-4. Decide whether this control should be evaluated against formal frameworks (ISO/PDPC)
-
-DECISION RULE (MANDATORY):
-- If control_type == "INTENT_ONLY", then rag_decision.include MUST be false
-- Only PARTIAL_CONTROL or AUDIT_READY may be included in RAG
-
-IMPORTANT RULES:
-- Ignore descriptive or aspirational text
-- Prefer fewer, higher-quality controls
-- Do NOT invent requirements not present in the policy
-
-Return STRICT JSON only, as a list of objects in this schema:
-
-Return STRICT JSON only, as a list of objects in this schema:
-
-[
-  {
-    "statement": "...",
-    "control_area": "...",
-    "control_type": "INTENT_ONLY | PARTIAL_CONTROL | AUDIT_READY",
-    "missing_elements": ["..."],
-    "rag_decision": {
-      "include": true | false,
-      "reason": "...",
-      "blocking_factors": ["..."]
-    },
-    "confidence": 0.0 to 1.0
-  }
-]
-
-POLICY DOCUMENT:
-""" + text
 
     response = llm.invoke(prompt)
+    content = response.content
+
+    # CLEANER: Removes ```json or ``` blocks if the LLM includes them
+    clean_content = re.sub(r'^```json\s*|```\s*$', '', content.strip(), flags=re.MULTILINE)
 
     try:
-        parsed = json.loads(response.content)
-    except Exception:
-        # Fail safe: return empty list instead of garbage
-        return []
-
-    return parsed
+        parsed = json.loads(clean_content)
+        return parsed
+    except Exception as e:
+        print(f"JSON Parsing Error: {e}")
+        # Return a structure that matches your template so it doesn't crash
+        return {
+            "metadata": {"title": "Error Parsing", "owner": "N/A", "effective_date": "N/A", "applies_to": "N/A"},
+            "analysis": []
+        }

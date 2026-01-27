@@ -1,61 +1,73 @@
-<!doctype html> 
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>Analysis Results</title>
-  <style>
-    body { font-family: Arial; margin: 30px; max-width: 900px; }
-    .box { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
-    .status { font-weight: bold; }
-    pre { background: #f7f7f7; padding: 12px; overflow: auto; }
-    a { text-decoration: none; }
-  </style>
-</head>
-<body>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Report | PolicyProbe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --probe-navy: #1a2a6c;
+            --probe-blue: #0052cc;
+            --probe-gold: #ffc107;
+            --light-bg: #f4f7f9;
+        }
 
-  <p><a href="/">← Back</a></p>
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
 
-  {% if error %}
-    <div class="box">
-      <b>Error:</b> {{ error }}
-    </div>
-  {% endif %}
+        /* Professional Header */
+        .report-header {
+            background: linear-gradient(135deg, var(--probe-navy) 0%, var(--probe-blue) 100%);
+            color: white;
+            padding: 40px 0;
+            border-bottom: 5px solid var(--probe-gold);
+            margin-bottom: 30px;
+        }
 
-  {% if results %}
-    <h2>Policy Comparison Results</h2>
+        /* Table Styling */
+        .audit-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
 
-    {% for r in results %}
-      <div class="box">
+        .table thead {
+            background-color: var(--probe-navy);
+            color: white;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
 
-        <h3>Requirement</h3>
-        <pre>{{ r.requirement }}</pre>
+        /* Dynamic Reference Badge */
+        .iso-ref-badge {
+            background-color: #e7f0ff;
+            color: var(--probe-blue);
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 4px;
+            border: 1px solid #b3d1ff;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
 
-        <p class="status">
-          Final Status: {{ r.status }}
-        </p>
+        /* Bullet Point Formatting */
+        .bullet-list {
+            padding-left: 1.2rem;
+            margin-bottom: 0;
+            list-style-type: square;
+            font-size: 0.85rem;
+            color: #555;
+        }
 
-        <!-- ✅ WHY SECTION (from interpreter.missing_elements) -->
-        {% if r.why %}
-          <h4>Why</h4>
-          <ul>
-            {% for w in r.why.split(";") %}
-              <li>{{ w }}</li>
-            {% endfor %}
-          </ul>
-        {% endif %}
+        .bullet-list li {
+            margin-bottom: 6px;
+        }
 
-        <!-- ✅ Risk Rating only (no narrative prose) -->
-        {% if r.rating %}
-          <p><b>Risk Rating:</b> {{ r.rating }}</p>
-        {% endif %}
-
-      </div>
-    {% endfor %}
-  {% else %}
-    <div class="box">
-      <p>No results to display.</p>
-    </div>
-  {% endif %}
-
-</body>
-</html>
+        /*

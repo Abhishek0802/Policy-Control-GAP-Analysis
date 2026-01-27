@@ -1,104 +1,85 @@
+# 1. Framework Imports
 from langgraph.graph import StateGraph, END
-from app.state import AppState
 
+# 2. Project Imports (Ensuring they match your folder structure)
+from app.state import AppState
 from app.agents.router_agent import router_agent
 from app.agents.gap_agent import gap_agent
 from app.agents.risk_agent import risk_assessment_agent, risk_materiality_agent
 
+# --- STEP 1: THE RECORDER (Finalizing the State) ---
+def finalize_and_log(state: AppState):
+    """
+    This function acts as the archiver. It takes the notes from the 'Clipboard' (State)
+    and saves them into the permanent 'Audit Log'.
+    """
+    # Map the technical routes to user-friendly status labels
+    status_map = {
+        "KEEP_GAP": "Non-Compliant (Gap)", 
+        "NO_GAP_HIGH_RISK": "Compliant but Risky", 
+        "DROP_GAP": "Out of Scope"
+    }
+    
+    final_status = status_map.get(state.gap_route, "Unknown")
 
-def router_edge(state: AppState):
-    # DROP_GAP ends (log only)
-    # KEEP_GAP -> gap_agent -> risk
-    # NO_GAP_HIGH_RISK -> skip gap_agent -> risk
-    if state.gap_route == "DROP_GAP":
-        return "DROP"
-    if state.gap_route == "KEEP_GAP":
-        return "KEEP"
-    return "NO_GAP_HIGH_RISK"
-
-
-def risk_edge(state: AppState):
-    return "KEEP_RISK" if state.risk_route == "KEEP_RISK" else "DROP_RISK"
-
-
-def log_and_end(state: AppState):
-    # ---- ROUTER → FINAL STATUS MAPPING ----
-    if state.gap_route == "KEEP_GAP":
-        final_status = "GAP"
-    elif state.gap_route == "NO_GAP_HIGH_RISK":
-        final_status = "RISK"
-    elif state.gap_route == "DROP_GAP":
-        final_status = "DROPPED"
-    else:
-        final_status = "UNKNOWN"
-    # -------------------------------------
-
+    # We append a dictionary to the list in AppState.audit_log
+    # These keys MUST match what you use in your result.html table
     state.audit_log.append({
-        "requirement": state.requirement,
-        "gap_route": state.gap_route,
-        "gap_confidence": state.gap_confidence,
-        "gap_reason": state.gap_reason,
-        "gap_summary": state.gap_summary,
-        "gap_severity": state.gap_severity,
-        "risk_route": state.risk_route,
-        "risk_confidence": state.risk_confidence,
-        "risk_reason": state.risk_reason,
-        "risk_statement": state.risk_statement,
-        "rating": state.rating,
-        "status": final_status,
+        "clause": state.requirement,          # From Step 1
+        "status": final_status,               # Determined above
+        "gap_summary": state.gap_summary,     # From Step 3 (Gap Agent)
+        "risk_rating": state.rating,          # From Step 4 (Risk Agent)
+        "risk_details": state.risk_statement, # From Step 4 (Risk Agent)
+        "recommendation": state.gap_recommendation # From Step 3 (Gap Agent)
     })
+    
     return state
 
+# --- STEP 2: TRAFFIC CONTROL (Conditional Logic) ---
+def route_after_router(state: AppState):
+    """Decides the first path based on the Inspector's initial scan."""
+    if state.gap_route == "DROP_GAP": 
+        return "FINISH"
+    if state.gap_route == "KEEP_GAP": 
+        return "AUDIT"
+    return "RISK_ONLY"
 
-def drop_gap_node(state: AppState):
-    return log_and_end(state)
+def route_after_risk(state: AppState):
+    """Decides if the final risk is significant enough to be logged."""
+    # Matches the RiskRoute Literal ["KEEP_RISK", "DROP_RISK"] in state.py
+    return "LOG" if state.risk_route == "KEEP_RISK" else "LOG" # We log both for audit transparency
 
+# --- STEP 3: CONSTRUCTING THE GRAPH ---
+builder = StateGraph(AppState)
 
-def keep_risk_node(state: AppState):
-    return log_and_end(state)
+# Define the Nodes (The "Workstations")
+builder.add_node("inspector", router_agent)
+builder.add_node("gap_auditor", gap_agent)
+builder.add_node("risk_expert", risk_assessment_agent)
+builder.add_node("impact_analyst", risk_materiality_agent)
+builder.add_node("logger", finalize_and_log)
 
+# --- STEP 4: DEFINING THE FLOW ---
+builder.set_entry_point("inspector")
 
-def drop_risk_node(state: AppState):
-    return log_and_end(state)
+# Branching from the Inspector
+builder.add_conditional_edges("inspector", route_after_router, {
+    "FINISH": "logger",
+    "AUDIT": "gap_auditor",
+    "RISK_ONLY": "risk_expert"
+})
 
+# Sequential movement: Audit -> Risk Check -> Impact Analysis
+builder.add_edge("gap_auditor", "risk_expert")
+builder.add_edge("risk_expert", "impact_analyst")
 
-graph = StateGraph(AppState)
+# Final check before closing the file
+builder.add_conditional_edges("impact_analyst", route_after_risk, {
+    "LOG": "logger"
+})
 
-graph.add_node("router", router_agent)
-graph.add_node("gap", gap_agent)
-graph.add_node("risk_assess", risk_assessment_agent)
-graph.add_node("risk_materiality", risk_materiality_agent)
+# The logger always leads to the END of the process
+builder.add_edge("logger", END)
 
-graph.add_node("drop_gap", drop_gap_node)
-graph.add_node("keep_risk", keep_risk_node)
-graph.add_node("drop_risk", drop_risk_node)
-
-graph.set_entry_point("router")
-
-graph.add_conditional_edges(
-    "router",
-    router_edge,
-    {
-        "DROP": "drop_gap",
-        "KEEP": "gap",
-        "NO_GAP_HIGH_RISK": "risk_assess",
-    }
-)
-
-graph.add_edge("gap", "risk_assess")
-graph.add_edge("risk_assess", "risk_materiality")
-
-graph.add_conditional_edges(
-    "risk_materiality",
-    risk_edge,
-    {
-        "KEEP_RISK": "keep_risk",
-        "DROP_RISK": "drop_risk",
-    }
-)
-
-graph.add_edge("drop_gap", END)
-graph.add_edge("keep_risk", END)
-graph.add_edge("drop_risk", END)
-
-app = graph.compile()
+# Compile the graph into an executable app
+app = builder.compile()

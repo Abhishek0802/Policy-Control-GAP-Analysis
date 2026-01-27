@@ -1,4 +1,7 @@
-# app/rag/ingest.py
+'''
+Module for ingesting documents and converting them into embeddings
+'''
+
 import os
 from pathlib import Path
 from typing import List

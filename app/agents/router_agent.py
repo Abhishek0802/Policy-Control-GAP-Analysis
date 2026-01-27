@@ -2,47 +2,57 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from app.config import CHAT_MODEL
-
+from app.state import AppState
 
 class RouterDecision(BaseModel):
+    """Structured output for the Triage decision."""
     route: Literal["KEEP_GAP", "DROP_GAP", "NO_GAP_HIGH_RISK"]
     confidence: float = Field(..., ge=0.0, le=1.0)
     reason: str
 
-
-def router_agent(state):
+def router_agent(state: AppState):
+    """
+    Agent 1: The Inspector (Triage)
+    Purpose: Quickly determines if a clause is worth a deep-dive audit 
+    based on the specific document scope provided.
+    """
+    
+    # We use a very low temperature (0) for the Router to ensure 
+    # consistent, non-creative categorization.
+    llm = ChatOpenAI(model=CHAT_MODEL, temperature=0)
+    
     prompt = f"""
-You are a Big-4 style Router/Triage Agent.
+    You are a Senior Big-4 Compliance Auditor. 
+    Your job is to TRIAGE a policy clause against a specific regulatory scope.
 
-You are given ONE control and a prior evaluation result (FULL, PARTIAL, GAP).
+    CURRENT AUDIT SCOPE (The Reference Document): 
+    {state.scope}
 
-Engagement scope: {state.scope}
+    INTERNAL POLICY REQUIREMENT:
+    "{state.requirement}"
 
-Requirement:
-{state.requirement}
+    EVIDENCE FOUND:
+    "{state.evidence}"
 
-Evidence (policy/framework snippets):
-{state.evidence}
+    CONTEXTUAL DATA:
+    - Current Gap Severity: {getattr(state, 'gap_severity', 'N/A')}
+    - Current Risk Rating: {getattr(state, 'rating', 'N/A')}
 
-Gap severity (if any): {state.gap_severity}
-Risk rating (if any): {state.rating}
-Control type: {getattr(state, "control_type", "UNKNOWN")}
+    DECISION LOGIC:
+    1. KEEP_GAP: Use if there's a Medium/High gap OR a clear promise made that MUST be verified against {state.scope}.
+    2. NO_GAP_HIGH_RISK: Use if the clause looks okay but involves dangerous operations (e.g. manual deletion, admin access).
+    3. DROP_GAP: Use ONLY if the text is out of scope (e.g. headers, footer, or unrelated to {state.scope}).
 
-Decide exactly ONE route:
-If gap_severity is Medium or High → KEEP_GAP
-- If no gap exists AND risk rating is High or Critical → NO_GAP_HIGH_RISK
-- DROP_GAP ONLY if the control is clearly out of scope or intent-only
+    Return ONLY STRICT JSON matching the schema.
+    """
 
-Return STRICT JSON:
-{{
-  "route": "KEEP_GAP" | "DROP_GAP" | "NO_GAP_HIGH_RISK",
-  "confidence": 0 to 1,
-  "reason": "one short sentence"
-}}
-"""
-    llm = ChatOpenAI(model=CHAT_MODEL, temperature=0.2)
-    decision = llm.with_structured_output(RouterDecision).invoke(prompt)
+    # Using structured output ensures the AI doesn't return conversational text
+    structured_llm = llm.with_structured_output(RouterDecision)
+    decision = structured_llm.invoke(prompt)
+
+    # Record the findings back to the 'Smart Clipboard' (AppState)
     state.gap_route = decision.route
     state.gap_confidence = decision.confidence
     state.gap_reason = decision.reason
+
     return state

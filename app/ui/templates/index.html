@@ -4,36 +4,93 @@
   <meta charset="utf-8"/>
   <title>Policy & Control GAP Analysis</title>
   <style>
-    body { font-family: Arial; margin: 30px; max-width: 900px; }
-    .card { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
-    input { width: 100%; padding: 10px; margin-top: 8px; }
-    button { padding: 10px 16px; margin-top: 10px; cursor: pointer; }
-    small { color: #555; }
+    /* Consistent font and background with the Review page */
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      margin: 0; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f7f6; 
+      color: #333;
+    }
+    
+    .card { 
+      background: white;
+      border: 1px solid #e0e0e0; 
+      padding: 40px; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      max-width: 500px; 
+      width: 100%;
+      text-align: center;
+    }
+
+    h2 { color: #007bff; margin-bottom: 10px; }
+    h3 { font-weight: 500; color: #555; margin-bottom: 30px; }
+
+    .upload-area {
+      border: 2px dashed #007bff;
+      padding: 30px;
+      border-radius: 8px;
+      background: #f8fbff;
+      margin-bottom: 20px;
+    }
+
+    input[type="file"] { 
+      width: 100%; 
+      padding: 10px 0; 
+      margin-top: 8px; 
+      cursor: pointer;
+    }
+
+    button { 
+      background-color: #007bff; 
+      color: white; 
+      border: none;
+      padding: 14px 28px; 
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer; 
+      width: 100%;
+      transition: background 0.3s;
+    }
+
+    button:hover { background-color: #0056b3; }
+
+    .footer-note { 
+      margin-top: 20px;
+      font-size: 0.85rem; 
+      color: #777; 
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
 
-  <h2>AI Risk & Compliance Copilot</h2>
-
   <div class="card">
-    <h3>Upload Newly Released Policy</h3>
+    <h2>PolicyProbe</h2>
+    <h3>Upload Policy Document</h3>
 
     <form action="/analyze" method="post" enctype="multipart/form-data">
-      <input
-        type="file"
-        name="file"
-        accept=".pdf,.txt"
-        required
-      />
+      <div class="upload-area">
+        <input
+          type="file"
+          name="file"
+          accept=".pdf,.txt"
+          required
+        />
+      </div>
 
       <button type="submit">Analyze Policy</button>
 
-      <p>
-        <small>
-          Upload a newly released policy document. The system will extract requirements,
-          request human review, and compare them against internal company policies.
-        </small>
-      </p>
+      <div class="footer-note">
+        The <strong>AI Interpreter</strong> extracts metadata and maps internal clauses to themes, 
+        which are then cross-referenced via <strong>Graph-based LangChain</strong> 
+        to validate alignment against <strong>ISO Regulatory Frameworks</strong>.
+      </div>
     </form>
   </div>
 

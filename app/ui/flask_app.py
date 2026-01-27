@@ -6,8 +6,7 @@ from app.config import FAISS_INDEX_PATH, SCOPE, CHAT_MODEL
 from app.state import AppState
 from app.graph.flow import app as graph_app
 
-from app.rag.retriever import retrieve_controls
-from app.rag.ingest import build_faiss_from_folder
+from app.rag.ingest_embeddings import build_faiss_from_folder
 from app.rag.temp_ingest import build_temp_faiss
 
 from app.agents.new_doc_interpreter import interpret_new_document
@@ -34,80 +33,87 @@ def index():
     return render_template("index.html")
 
 
-@flask_app.post("/upload")
-def upload():
-    """
-    Upload INTERNAL reference policies and rebuild FAISS index.
-    """
-    os.makedirs(flask_app.config["UPLOAD_FOLDER"], exist_ok=True)
-
-    files = request.files.getlist("files")
-    saved = 0
-
-    for f in files:
-        if f and allowed_file(f.filename):
-            name = secure_filename(f.filename)
-            path = os.path.join(flask_app.config["UPLOAD_FOLDER"], name)
-            f.save(path)
-            saved += 1
-
-    build_faiss_from_folder(folder=UPLOAD_FOLDER, save_path=FAISS_INDEX_PATH)
-
-    return render_template("result.html", mode="upload", saved=saved)
-
 
 @flask_app.post("/analyze")
 def analyze():
-    uploaded_file = request.files["file"]
-    pdf_path = os.path.join("data/temp", uploaded_file.filename)
-    os.makedirs("data/temp", exist_ok=True)
-    uploaded_file.save(pdf_path)
+    uploaded_file = request.files.get("file")   
+    filename = secure_filename(uploaded_file.filename)
+    
+    if not uploaded_file or uploaded_file.filename == "":
+        return "No file uploaded", 400
+    
+    os.makedirs("data/user_input", exist_ok=True)
 
+    uploaded_pdf_path = os.path.join("data/user_input", filename)
+    uploaded_file.save(uploaded_pdf_path)
+    
+    # 1. Build Index (or just load documents for the prompt)
+    temp_faiss = build_temp_faiss(uploaded_pdf_path)
 
-    temp_faiss = build_temp_faiss(pdf_path)
-    policy_text = "\n".join(
-    d.page_content for d in temp_faiss.docstore._dict.values()
-    )
+    # 2. Extract full text in order
+    policy_text = "\n".join([doc.page_content for doc in temp_faiss.docstore._dict.values()])
 
-
+    # 3. Call your updated prompt function
     llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0)
+    interpreted_data = interpret_new_document(llm, policy_text)
 
+    # 4. Save to config for later retrieval if needed
+    flask_app.config["LAST_INTERPRETED"] = interpreted_data
 
-    interpreted = interpret_new_document(llm, policy_text)
-
-
-    # Persist interpreter output for human review
-    flask_app.config["LAST_INTERPRETED"] = interpreted
-
-
+    # 5. Render with specific keys
     return render_template(
-    "interpreter_review.html",
-    clauses=interpreted
+        "interpreter_review.html",
+        metadata=interpreted_data.get("metadata", {}),
+        analysis=interpreted_data.get("analysis", [])
     )
 
 @flask_app.post("/review/submit")
 def submit_review():
-    approved = set(request.form.getlist("approved_clauses"))
-    interpreted = flask_app.config.get("LAST_INTERPRETED", [])
+    # 1. Capture the list of clauses checked by the user
+    approved_texts = set(request.form.getlist("approved_clauses"))
 
+    # 2. Retrieve the full interpretation dictionary from config
+    interpreted_data = flask_app.config.get("LAST_INTERPRETED", {})
+    analysis_items = interpreted_data.get("analysis", [])
+     
     results = []
 
-    for item in interpreted:
-        if item["statement"] not in approved:
+    # 3. Process only the approved clauses through the Graph
+    for item in analysis_items:
+        current_clause = item.get("exact_clause")
+        if current_clause not in approved_texts:
             continue
 
-        state = AppState(
-            requirement=item["statement"],
-            evidence="; ".join(item.get("missing_elements", [])),
-            scope=SCOPE
-        )
-
+        # 4. Prepare the State for Graph-based Analysis
+        state = {
+            "requirement": current_clause,
+            "theme": item.get("theme"),
+            "scope": SCOPE
+        }
+        
+        # 5. Invoke the Graph App (LangChain Graph)
         out = graph_app.invoke(state)
-        results.extend(out.get("audit_log", []))
 
+        # Get the LAST entry added to the audit log by the finalized_and_log agent
+        # If the log is empty (e.g., dropped), we provide a fallback
+        audit_entries = out.get("audit_log", [])
+        final_finding = audit_entries[-1] if audit_entries else {}
+        
+        # Collect the audit findings (e.g., "Missing Verification")
+        results.append({
+        "theme": item.get("theme"),
+        "clause": current_clause,
+        "source_ref": out.get("source_ref", "N/A"),             # Dynamic from Gap Agent
+        "status": out.get("gap_route", "Processing Error"),      # Dynamic from Router
+        "gap_summary": out.get("gap_summary", "Review complete."), # Dynamic from Gap Agent
+        "risk_rating": out.get("rating", "N/A"),                # Dynamic from Risk Agent
+        "recommendation": out.get("gap_recommendation", "")     # Dynamic from Gap Agent
+        })
+        
     return render_template(
         "result.html",
-        results=results
+        results=results,
+        metadata=interpreted_data.get("metadata", {})
     )
 
 def run():
