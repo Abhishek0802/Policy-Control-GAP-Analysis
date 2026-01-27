@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audit Report | PolicyProbe</title>
+    <title>Audit Results | PolicyProbe</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
@@ -12,62 +12,72 @@
             --probe-gold: #ffc107;
             --light-bg: #f4f7f9;
         }
-
-        body {
-            background-color: var(--light-bg);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
-        }
-
-        /* Professional Header */
+        body { background-color: var(--light-bg); font-family: 'Segoe UI', sans-serif; }
         .report-header {
             background: linear-gradient(135deg, var(--probe-navy) 0%, var(--probe-blue) 100%);
-            color: white;
-            padding: 40px 0;
-            border-bottom: 5px solid var(--probe-gold);
-            margin-bottom: 30px;
+            color: white; padding: 30px 0; border-bottom: 5px solid var(--probe-gold); margin-bottom: 30px;
         }
+        .audit-card { background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; }
+        .iso-ref-badge { background-color: #e7f0ff; color: var(--probe-blue); font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 4px; border: 1px solid #b3d1ff; display: inline-block; }
+    </style>
+</head>
+<body>
 
-        /* Table Styling */
-        .audit-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-            overflow: hidden;
-        }
+<header class="report-header shadow-sm">
+    <div class="container">
+        <h1>PolicyProbe Audit Report</h1>
+        <p class="mb-0">Analysis of: <strong>{{ metadata.filename | default('Uploaded Policy') }}</strong></p>
+    </div>
+</header>
 
-        .table thead {
-            background-color: var(--probe-navy);
-            color: white;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-        }
+<main class="container mb-5">
+    <div class="audit-card bg-white p-0">
+        <table class="table table-hover mb-0" style="width: 100%; border-collapse: collapse;">
+            <thead style="background-color: var(--probe-navy); color: white;">
+                <tr>
+                    <th style="padding: 15px; width: 25%;">Requirement & Theme</th>
+                    <th style="padding: 15px; width: 55%;">Gap Analysis & Recommendation</th>
+                    <th style="padding: 15px; width: 20%; text-align: center;">Status & Risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 20px; vertical-align: top;">
+                        <span class="iso-ref-badge">{{ item.source_ref | default('N/A') }}</span>
+                        <div style="margin-top: 10px; font-weight: 700; color: var(--probe-navy); font-size: 1.1rem;">
+                            {{ item.theme }}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #666; font-style: italic; margin-top: 8px; border-left: 2px solid #ddd; padding-left: 10px;">
+                            "{{ item.clause }}"
+                        </div>
+                    </td>
 
-        /* Dynamic Reference Badge */
-        .iso-ref-badge {
-            background-color: #e7f0ff;
-            color: var(--probe-blue);
-            font-size: 0.7rem;
-            font-weight: 800;
-            padding: 3px 10px;
-            border-radius: 4px;
-            border: 1px solid #b3d1ff;
-            display: inline-block;
-            margin-bottom: 8px;
-        }
+                    <td style="padding: 20px; vertical-align: top;">
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #d9534f; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Finding:</strong>
+                            <p style="font-size: 0.95rem; line-height: 1.5; color: #333;">{{ item.gap_summary }}</p>
+                        </div>
+                        
+                        {% if item.recommendation %}
+                        <div style="background: #fff9e6; padding: 15px; border-radius: 8px; border: 1px dashed var(--probe-gold);">
+                            <strong style="color: #856404; font-size: 0.85rem;">RECOVERY PLAN:</strong>
+                            <p style="font-size: 0.95rem; margin-bottom: 0;">{{ item.recommendation }}</p>
+                        </div>
+                        {% endif %} 
+                    </td>
 
-        /* Bullet Point Formatting */
-        .bullet-list {
-            padding-left: 1.2rem;
-            margin-bottom: 0;
-            list-style-type: square;
-            font-size: 0.85rem;
-            color: #555;
-        }
+                    <td style="padding: 20px; vertical-align: middle; text-align: center;">
+                        <span class="badge {% if item.status == 'Compliant' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ item.status | default('Gap Detected') }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</main>
 
-        .bullet-list li {
-            margin-bottom: 6px;
-        }
-
-        /*
+</body>
+</html>

@@ -111,6 +111,7 @@ def submit_review():
         })
         
     return render_template(
+        
         "result.html",
         results=results,
         metadata=interpreted_data.get("metadata", {})
