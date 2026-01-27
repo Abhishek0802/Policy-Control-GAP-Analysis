@@ -11,23 +11,26 @@ class GapFinding(BaseModel):
 
 
 def gap_agent(state):
-    prompt = f"""
+    prompt = """
 You are a compliance gap analyst.
 
+
 Requirement:
-{state.requirement}
+""" + state.requirement + """
+
 
 Evidence:
-{state.evidence}
+""" + state.evidence + """
 
-Create a concise consulting-ready gap finding.
+
+Determine ONLY whether a gap exists and its severity.
+DO NOT write explanations or recommendations.
+
 
 Return STRICT JSON:
-{{
-  "gap_summary": "...",
-  "severity": "Low" | "Medium" | "High",
-  "recommendation": "..."
-}}
+{
+"severity": "Low" | "Medium" | "High"
+}
 """
     llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0.2)
     out = llm.with_structured_output(GapFinding).invoke(prompt)

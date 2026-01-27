@@ -30,7 +30,7 @@ def load_faiss_retriever(k: int = 6):
     return vectorstore.as_retriever(search_kwargs={"k": k})
 
 
-def retrieve_evidence(query: str, k: int = 3) -> str:
+def retrieve_controls(query: str, k: int = 3):
     """
     Convenience helper: loads retriever and returns joined text context.
     """
@@ -44,4 +44,4 @@ def retrieve_evidence(query: str, k: int = 3) -> str:
         if text.strip():
             chunks.append(text.strip())
 
-    return "\n\n---\n\n".join(chunks)
+    return docs

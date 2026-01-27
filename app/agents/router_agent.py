@@ -14,7 +14,7 @@ def router_agent(state):
     prompt = f"""
 You are a Big-4 style Router/Triage Agent.
 
-Goal: Decide what to do with the requirement based on evidence and context.
+You are given ONE control and a prior evaluation result (FULL, PARTIAL, GAP).
 
 Engagement scope: {state.scope}
 
@@ -24,13 +24,14 @@ Requirement:
 Evidence (policy/framework snippets):
 {state.evidence}
 
+Gap severity (if any): {state.gap_severity}
+Risk rating (if any): {state.rating}
+Control type: {getattr(state, "control_type", "UNKNOWN")}
+
 Decide exactly ONE route:
-1) KEEP_GAP:
-   - There is a meaningful control gap worth reporting.
-2) DROP_GAP:
-   - Finding is cosmetic/redundant/out-of-scope and not decision-relevant.
-3) NO_GAP_HIGH_RISK:
-   - No clear compliance gap, but contextual risk is still high and must be evaluated (e.g., threat environment, operational weakness).
+If gap_severity is Medium or High → KEEP_GAP
+- If no gap exists AND risk rating is High or Critical → NO_GAP_HIGH_RISK
+- DROP_GAP ONLY if the control is clearly out of scope or intent-only
 
 Return STRICT JSON:
 {{

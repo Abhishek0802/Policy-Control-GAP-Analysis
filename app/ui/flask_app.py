@@ -1,26 +1,21 @@
-# app/ui/flask_app.py
 import os
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
-from app.config import FAISS_INDEX_PATH, SCOPE
+from app.config import FAISS_INDEX_PATH, SCOPE, CHAT_MODEL
 from app.state import AppState
 from app.graph.flow import app as graph_app
-from app.rag.retriever import load_faiss_retriever
-from app.rag.retriever import retrieve_evidence
-from app.rag.ingest import build_faiss_from_folder  
-from app.agents.delta_detector import delta_detector
 
+from app.rag.retriever import retrieve_controls
+from app.rag.ingest import build_faiss_from_folder
 from app.rag.temp_ingest import build_temp_faiss
+
 from app.agents.new_doc_interpreter import interpret_new_document
 
 from langchain_openai import ChatOpenAI
-from app.config import CHAT_MODEL
 
 import logging
 logging.basicConfig(level=logging.INFO)
-
-
 
 UPLOAD_FOLDER = "data/internal_policies"
 ALLOWED_EXTENSIONS = {"pdf", "txt"}
@@ -42,7 +37,7 @@ def index():
 @flask_app.post("/upload")
 def upload():
     """
-    Upload INTERNAL company policies and rebuild persistent FAISS index.
+    Upload INTERNAL reference policies and rebuild FAISS index.
     """
     os.makedirs(flask_app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -56,7 +51,6 @@ def upload():
             f.save(path)
             saved += 1
 
-    # Rebuild index from uploaded docs (simple but works for demo)
     build_faiss_from_folder(folder=UPLOAD_FOLDER, save_path=FAISS_INDEX_PATH)
 
     return render_template("result.html", mode="upload", saved=saved)
@@ -69,99 +63,52 @@ def analyze():
     os.makedirs("data/temp", exist_ok=True)
     uploaded_file.save(pdf_path)
 
-    temp_faiss = build_temp_faiss(pdf_path)
 
-    text = "\n".join(
-        d.page_content for d in temp_faiss.docstore._dict.values()
+    temp_faiss = build_temp_faiss(pdf_path)
+    policy_text = "\n".join(
+    d.page_content for d in temp_faiss.docstore._dict.values()
     )
 
-    llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0.2)
-    interpreted = interpret_new_document(llm, text)
 
-    # Delta detection
-    delta_filtered = []
-    for item in interpreted:
-        decision = delta_detector(item["requirement"])
-        if decision in ["NOT_COVERED", "STRONGER"]:
-            delta_filtered.append(item)
+    llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0)
 
-    if not delta_filtered:
-        return render_template(
-            "result.html",
-            message="No new or changed requirements detected.",
-            results=[]
-        )
 
-    AUTO_THRESHOLD = 0.8
-    auto_approved = []
-    needs_review = []
+    interpreted = interpret_new_document(llm, policy_text)
 
-    for item in delta_filtered:
-        if item["confidence"] >= AUTO_THRESHOLD:
-            auto_approved.append(item)
-        else:
-            needs_review.append(item)
 
-    if not needs_review:
-        results = []
-        for item in auto_approved:
-            req = item["requirement"]
-            evidence = retrieve_evidence(req)
+    # Persist interpreter output for human review
+    flask_app.config["LAST_INTERPRETED"] = interpreted
 
-            state = AppState(
-                requirement=req,
-                evidence=evidence,
-                scope=SCOPE,
-                approved_requirements=[req],
-                human_review_done=True
-            )
-
-            out = graph_app.invoke(state)
-            audit_log = out.get("audit_log", [])
-            if audit_log:
-                results.append(audit_log[-1])
-
-        return render_template(
-            "result.html",
-            results=results
-        )
 
     return render_template(
-        "review.html",
-        interpreted=needs_review,
-        auto_approved=auto_approved
+    "interpreter_review.html",
+    clauses=interpreted
     )
-
-
 
 @flask_app.post("/review/submit")
 def submit_review():
-    approved = request.form.getlist("approved_requirements")
+    approved = set(request.form.getlist("approved_clauses"))
+    interpreted = flask_app.config.get("LAST_INTERPRETED", [])
 
     results = []
 
-    for req in approved:
-        evidence = retrieve_evidence(req)
+    for item in interpreted:
+        if item["statement"] not in approved:
+            continue
 
         state = AppState(
-            requirement=req,
-            evidence=evidence,
-            scope=SCOPE,
-            approved_requirements=[req],
-            human_review_done=True
+            requirement=item["statement"],
+            evidence="; ".join(item.get("missing_elements", [])),
+            scope=SCOPE
         )
 
         out = graph_app.invoke(state)
-        audit_log = out.get("audit_log", [])
-        if audit_log:
-            results.append(audit_log[-1])
+        results.extend(out.get("audit_log", []))
 
     return render_template(
         "result.html",
-        mode="compare",
         results=results
     )
-
 
 def run():
     flask_app.run(host="127.0.0.1", port=5000, debug=True)

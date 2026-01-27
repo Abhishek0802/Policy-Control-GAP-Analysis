@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html> 
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -34,27 +34,19 @@
           Final Status: {{ r.status }}
         </p>
 
-        {% if r.gap_summary %}
-          <h4>Gap Summary</h4>
-          <pre>{{ r.gap_summary }}</pre>
+        <!-- ✅ WHY SECTION (from interpreter.missing_elements) -->
+        {% if r.why %}
+          <h4>Why</h4>
+          <ul>
+            {% for w in r.why.split(";") %}
+              <li>{{ w }}</li>
+            {% endfor %}
+          </ul>
         {% endif %}
 
-        {% if r.gap_severity %}
-          <p><b>Gap Severity:</b> {{ r.gap_severity }}</p>
-        {% endif %}
-
-        {% if r.risk_statement %}
-          <h4>Risk Statement</h4>
-          <pre>{{ r.risk_statement }}</pre>
-        {% endif %}
-
+        <!-- ✅ Risk Rating only (no narrative prose) -->
         {% if r.rating %}
           <p><b>Risk Rating:</b> {{ r.rating }}</p>
-        {% endif %}
-
-        {% if r.recommended_control %}
-          <h4>Recommended Control</h4>
-          <pre>{{ r.recommended_control }}</pre>
         {% endif %}
 
       </div>

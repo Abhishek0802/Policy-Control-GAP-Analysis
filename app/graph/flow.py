@@ -21,7 +21,18 @@ def risk_edge(state: AppState):
     return "KEEP_RISK" if state.risk_route == "KEEP_RISK" else "DROP_RISK"
 
 
-def log_and_end(state: AppState, status: str):
+def log_and_end(state: AppState):
+    # ---- ROUTER → FINAL STATUS MAPPING ----
+    if state.gap_route == "KEEP_GAP":
+        final_status = "GAP"
+    elif state.gap_route == "NO_GAP_HIGH_RISK":
+        final_status = "RISK"
+    elif state.gap_route == "DROP_GAP":
+        final_status = "DROPPED"
+    else:
+        final_status = "UNKNOWN"
+    # -------------------------------------
+
     state.audit_log.append({
         "requirement": state.requirement,
         "gap_route": state.gap_route,
@@ -34,21 +45,21 @@ def log_and_end(state: AppState, status: str):
         "risk_reason": state.risk_reason,
         "risk_statement": state.risk_statement,
         "rating": state.rating,
-        "status": status,
+        "status": final_status,
     })
     return state
 
 
 def drop_gap_node(state: AppState):
-    return log_and_end(state, "DROPPED_GAP")
+    return log_and_end(state)
 
 
 def keep_risk_node(state: AppState):
-    return log_and_end(state, "KEEP_RISK")
+    return log_and_end(state)
 
 
 def drop_risk_node(state: AppState):
-    return log_and_end(state, "DROPPED_RISK")
+    return log_and_end(state)
 
 
 graph = StateGraph(AppState)

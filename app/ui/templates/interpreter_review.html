@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Interpreter Review</title>
+  <style>
+    body { font-family: Arial; margin: 30px; max-width: 900px; }
+    .box { border: 1px solid #ddd; padding: 16px; margin-bottom: 16px; border-radius: 8px; }
+    .dropped { background: #fff5f5; }
+  </style>
+</head>
+<body>
+
+<h2>Interpreter Review</h2>
+<p>
+The interpreter analyzed the document.  
+Tick any clause you want to send for RAG-based analysis.
+</p>
+
+<form method="post" action="/review/submit">
+
+{% for c in clauses %}
+  <div class="box {% if not c.rag_decision.include %}dropped{% endif %}">
+    <input type="checkbox"
+           name="approved_clauses"
+           value="{{ c.statement }}"
+           {% if c.rag_decision.include %}checked{% endif %}>
+
+    <strong>{{ c.statement }}</strong>
+
+    {% if not c.rag_decision.include %}
+      <p><b>Dropped by interpreter:</b> {{ c.rag_decision.reason }}</p>
+    {% endif %}
+
+    {% if c.missing_elements %}
+      <p><b>Why:</b></p>
+      <ul>
+        {% for m in c.missing_elements %}
+          <li>{{ m }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endfor %}
+
+<button type="submit">Proceed to Analysis</button>
+
+</form>
+</body>
+</html>

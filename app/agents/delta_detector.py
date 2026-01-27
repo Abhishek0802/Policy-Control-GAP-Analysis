@@ -1,21 +1,33 @@
 from langchain_openai import ChatOpenAI
 from app.config import CHAT_MODEL
-from app.rag.retriever import retrieve_evidence
 
 llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0)
 
-def delta_detector(requirement: str) -> str:
-    internal_context = retrieve_evidence(requirement)
+
+def delta_detector(requirement: str, internal_policy_text: str) -> str:
+    """
+    Determines whether a new requirement is already covered by
+    existing internal policy text.
+
+    Returns ONLY one of:
+    COVERED | NOT_COVERED | STRONGER
+    """
 
     prompt = f"""
-Internal policy:
-{internal_context}
+You are performing requirement delta analysis.
+
+Internal policy content:
+{internal_policy_text}
 
 New requirement:
 {requirement}
 
-Is the new requirement already covered?
-Answer ONLY one word:
+Decision rules:
+- COVERED: Internal policy already addresses this requirement.
+- STRONGER: Internal policy covers this requirement with stronger controls.
+- NOT_COVERED: Requirement is missing or materially weaker.
+
+Answer with EXACTLY one word:
 COVERED or NOT_COVERED or STRONGER
 """
 

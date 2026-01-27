@@ -37,25 +37,19 @@ Evidence:
 {state.evidence}
 {gap_context}
 
-Draft a risk register entry (consulting style).
+Classify the risk level ONLY.
+DO NOT write narrative risk statements.
 
 Return STRICT JSON:
 {{
-  "risk_statement": "...",
-  "impact": "Low" | "Medium" | "High",
-  "likelihood": "Low" | "Medium" | "High",
-  "rating": "Low" | "Medium" | "High" | "Critical",
-  "recommended_control": "..."
+  rating: Literal["Low", "Medium", "High", "Critical"]
 }}
 """
     llm = ChatOpenAI(model_name=CHAT_MODEL, temperature=0.2)
     risk = llm.with_structured_output(RiskEntry).invoke(prompt)
 
-    state.risk_statement = risk.risk_statement
-    state.impact = risk.impact
-    state.likelihood = risk.likelihood
     state.rating = risk.rating
-    state.recommended_control = risk.recommended_control
+    
     return state
 
 
