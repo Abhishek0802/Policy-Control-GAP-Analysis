@@ -6,7 +6,7 @@ and saves the index to a designated path
 Ran manually from terminal 'python -m app.rag.ingest_rag.py' to create faiss_index files
 '''
 
-from app.rag.ingest_embeddings import build_faiss_from_folder
+from app.rag.vectorstore_indexer import build_faiss_from_folder
 
 
 build_faiss_from_folder(

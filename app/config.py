@@ -12,4 +12,3 @@ EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-3-small").strip()
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 FAISS_INDEX_PATH = os.path.join(BASE_DIR, "data", "faiss_index")
-SCOPE = "Policy & Control GAP Analysis"

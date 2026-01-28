@@ -1,7 +1,3 @@
-'''
-Module for ingesting documents and converting them into embeddings
-'''
-
 import os
 from pathlib import Path
 from typing import List
@@ -12,6 +8,7 @@ from langchain_community.document_loaders import PyPDFLoader, TextLoader
 
 from app.llm.openai_client import embeddings
 
+_VECTOR_DB = None
 
 def _load_docs_from_folder(folder: str) -> List[str]:
     texts: List[str] = []
@@ -44,3 +41,28 @@ def build_faiss_from_folder(folder: str, save_path: str):
     os.makedirs(save_path, exist_ok=True)
     db.save_local(save_path)
     return db
+
+
+def build_temp_faiss(pdf_path: str) -> FAISS:
+    docs = PyPDFLoader(pdf_path).load()
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=600,
+        chunk_overlap=100,
+    )
+    chunks = splitter.split_documents(docs)
+
+    return FAISS.from_documents(chunks, embeddings)
+
+def get_vector_db():
+    global _VECTOR_DB
+    if _VECTOR_DB is None:
+        _VECTOR_DB = FAISS.load_local(
+            "data/faiss_index", 
+            embeddings=embeddings, 
+            allow_dangerous_deserialization=True
+        )
+        
+        _VECTOR_DB.embedding_function = embeddings.embed_query
+        
+    return _VECTOR_DB

@@ -2,12 +2,11 @@ import os
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
-from app.config import FAISS_INDEX_PATH, SCOPE, CHAT_MODEL
+from app.config import FAISS_INDEX_PATH, CHAT_MODEL
 from app.state import AppState
 from app.graph.flow import app as graph_app
 
-from app.rag.ingest_embeddings import build_faiss_from_folder
-from app.rag.temp_ingest import build_temp_faiss
+from app.rag.vectorstore_indexer import build_faiss_from_folder, build_temp_faiss, get_vector_db
 
 from app.agents.new_doc_interpreter import interpret_new_document
 
@@ -16,11 +15,9 @@ from langchain_openai import ChatOpenAI
 import logging
 logging.basicConfig(level=logging.INFO)
 
-UPLOAD_FOLDER = "data/internal_policies"
 ALLOWED_EXTENSIONS = {"pdf", "txt"}
 
 flask_app = Flask(__name__)
-flask_app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 flask_app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
 
 
@@ -69,6 +66,9 @@ def analyze():
 
 @flask_app.post("/review/submit")
 def submit_review():
+    # Load the Internal Policies Vector DB (FAISS)
+    db = get_vector_db()
+
     # 1. Capture the list of clauses checked by the user
     approved_texts = set(request.form.getlist("approved_clauses"))
 
@@ -84,14 +84,18 @@ def submit_review():
         if current_clause not in approved_texts:
             continue
 
-        # 4. Prepare the State for Graph-based Analysis
+        # 4. RETRIEVER: Search the knowledge base for the top regulatory requirements    
+        search_results = db.similarity_search(current_clause, k=2)
+        dynamic_scope = "\n\n".join([doc.page_content for doc in search_results])
+
+        # 5. Prepare the State for Graph-based Analysis
         state = {
             "requirement": current_clause,
             "theme": item.get("theme"),
-            "scope": SCOPE
+            "scope": dynamic_scope
         }
         
-        # 5. Invoke the Graph App (LangChain Graph)
+        # 6. Invoke the Graph App (LangChain Graph)
         out = graph_app.invoke(state)
 
         # Get the LAST entry added to the audit log by the finalized_and_log agent
