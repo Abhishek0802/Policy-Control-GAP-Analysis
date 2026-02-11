@@ -17,7 +17,6 @@ class AppState(BaseModel):
     # --- 1. ENTRY DATA (Set by Flask) ---
     requirement: str                   # The actual text from the user's policy
     evidence: str = ""                 # Supporting text found in the document
-    source_ref: str = "N/A"
     
     # --- 2. TRIAGE DATA (Set by Router Agent) ---
     gap_route: Optional[GapRoute] = None
@@ -26,8 +25,10 @@ class AppState(BaseModel):
 
     # --- 3. AUDIT FINDINGS (Set by Gap Agent) ---
     gap_summary: Optional[str] = None  # Explanation of what ISO rule is missing
+    gap_status: Optional[str] = None   # "Fully Meets", "Partially Meets", "Does Not Meet"
     gap_severity: Optional[SeverityLevel] = None
     gap_recommendation: Optional[str] = None
+    source_ref: Optional[str] = None  # Dynamic reference from the PDF (e.g., "ISO 27001 Annex A.8.10")
 
     # --- 4. RISK ASSESSMENT (Set by Risk Agents) ---
     risk_statement: Optional[str] = None

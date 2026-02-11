@@ -7,7 +7,7 @@ from app.state import AppState
 class GapFinding(BaseModel):
     """Structured response for the Auditor's findings."""
     gap_summary: str
-    severity: Literal["Low", "Medium", "High"]
+    gap_status: str
     recommendation: str
     # This field ensures the AI points to the exact section in your PDFs
     source_ref: str = Field(
@@ -48,14 +48,14 @@ def gap_agent(state: AppState):
     the requirement described in the RETRIEVED EVIDENCE.
 
     3. gap_summary:
-    - Maximum 3 bullet-style sentences.
+    - Maximum 2 bullet-style sentences.
     - No introductions.
     - No conclusions.
     - No filler language.
     - State only objective comparison findings.
 
     4. recommendation:
-    - Bullet-style action steps written as short imperative statements.
+    - Maximum 2 bullet-style action steps written as short imperative statements.
     - No explanation.
     - No narrative justification.
 
@@ -69,8 +69,8 @@ def gap_agent(state: AppState):
 
     # Save findings to the State for the next agent (Risk Agent)
     state.gap_summary = analysis.gap_summary
-    state.gap_severity = analysis.severity
+    state.gap_status = analysis.gap_status
     state.gap_recommendation = analysis.recommendation
-    state.source_ref = analysis.source_ref  # Dynamic reference from the PDF
+    state.source_ref = analysis.source_ref
 
     return state
