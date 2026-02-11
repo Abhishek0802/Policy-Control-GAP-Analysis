@@ -17,7 +17,6 @@ class AppState(BaseModel):
     # --- 1. ENTRY DATA (Set by Flask) ---
     requirement: str                   # The actual text from the user's policy
     evidence: str = ""                 # Supporting text found in the document
-    scope: str                         # The ISO standard name (e.g., ISO 27001-A8.10)
     source_ref: str = "N/A"
     
     # --- 2. TRIAGE DATA (Set by Router Agent) ---

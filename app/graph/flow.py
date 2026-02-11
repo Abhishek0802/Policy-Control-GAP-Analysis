@@ -53,17 +53,17 @@ def route_after_risk(state: AppState):
 builder = StateGraph(AppState)
 
 # Define the Nodes (The "Workstations")
-builder.add_node("inspector", router_agent)
+builder.add_node("router_agent", router_agent)
 builder.add_node("gap_auditor", gap_agent)
 builder.add_node("risk_expert", risk_assessment_agent)
 builder.add_node("impact_analyst", risk_materiality_agent)
 builder.add_node("logger", finalize_and_log)
 
 # --- STEP 4: DEFINING THE FLOW ---
-builder.set_entry_point("inspector")
+builder.set_entry_point("router_agent")
 
 # Branching from the Inspector
-builder.add_conditional_edges("inspector", route_after_router, {
+builder.add_conditional_edges("router_agent", route_after_router, {
     "FINISH": "logger",
     "AUDIT": "gap_auditor",
     "RISK_ONLY": "risk_expert"

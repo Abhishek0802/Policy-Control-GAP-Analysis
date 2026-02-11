@@ -2,6 +2,8 @@ import os
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
+from sentence_transformers import CrossEncoder
+
 from app.config import FAISS_INDEX_PATH, CHAT_MODEL
 from app.state import AppState
 from app.graph.flow import app as graph_app
@@ -64,6 +66,8 @@ def analyze():
         analysis=interpreted_data.get("analysis", [])
     )
 
+reranker_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+
 @flask_app.post("/review/submit")
 def submit_review():
     # Load the Internal Policies Vector DB (FAISS)
@@ -85,14 +89,19 @@ def submit_review():
             continue
 
         # 4. RETRIEVER: Search the knowledge base for the top regulatory requirements    
-        search_results = db.similarity_search(current_clause, k=2)
-        dynamic_scope = "\n\n".join([doc.page_content for doc in search_results])
+        initial_results = db.similarity_search(current_clause, k=5)
+
+        # 5. Reranking documents via Cross-Encoder
+        pairs = [[current_clause, doc.page_content] for doc in initial_results]
+        scores = reranker_model.predict(pairs)
+        scored_docs = sorted(zip(scores, initial_results), key=lambda x: x[0], reverse=True)
+        top_reranked_docs = [doc for score, doc in scored_docs[:2]]
+        dynamic_scope = "\n\n".join([doc.page_content for doc in top_reranked_docs])
 
         # 5. Prepare the State for Graph-based Analysis
         state = {
             "requirement": current_clause,
-            "theme": item.get("theme"),
-            "scope": dynamic_scope
+            "evidence": dynamic_scope
         }
         
         # 6. Invoke the Graph App (LangChain Graph)

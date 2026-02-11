@@ -27,7 +27,7 @@ def gap_agent(state: AppState):
     prompt = f"""
     You are a Senior ISO Compliance Lead Auditor.
     
-    AUDIT SCOPE: {state.scope}
+    AUDIT SCOPE: 
     
     INTERNAL REQUIREMENT TO AUDIT:
     "{state.requirement}"

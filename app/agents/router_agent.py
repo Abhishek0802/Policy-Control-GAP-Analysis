@@ -14,7 +14,7 @@ def router_agent(state: AppState):
     """
     Agent 1: The Inspector (Triage)
     Purpose: Quickly determines if a clause is worth a deep-dive audit 
-    based on the specific document scope provided.
+    based on the specific document evidence provided.
     """
     
     # We use a very low temperature (0) for the Router to ensure 
@@ -25,8 +25,6 @@ def router_agent(state: AppState):
     You are a Senior Big-4 Compliance Auditor. 
     Your job is to TRIAGE a policy clause against a specific regulatory scope.
 
-    CURRENT AUDIT SCOPE (The Reference Document): 
-    {state.scope}
 
     INTERNAL POLICY REQUIREMENT:
     "{state.requirement}"
@@ -39,9 +37,9 @@ def router_agent(state: AppState):
     - Current Risk Rating: {getattr(state, 'rating', 'N/A')}
 
     DECISION LOGIC:
-    1. KEEP_GAP: Use if there's a Medium/High gap OR a clear promise made that MUST be verified against {state.scope}.
+    1. KEEP_GAP: Use if there's a Medium/High gap OR a clear promise made that MUST be verified against {state.evidence}.
     2. NO_GAP_HIGH_RISK: Use if the clause looks okay but involves dangerous operations (e.g. manual deletion, admin access).
-    3. DROP_GAP: Use ONLY if the text is out of scope (e.g. headers, footer, or unrelated to {state.scope}).
+    3. DROP_GAP: Use ONLY if the text is out of scope (e.g. headers, footer, or unrelated to {state.evidence}).
 
     Return ONLY STRICT JSON matching the schema.
     """
