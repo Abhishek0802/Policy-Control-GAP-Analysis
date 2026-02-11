@@ -17,8 +17,7 @@ class GapFinding(BaseModel):
 def gap_agent(state: AppState):
     """
     Agent 2: The Auditor
-    Purpose: Compares the internal policy against the specific section of the 
-    standard retrieved from the documents.
+    Purpose: Compares the internal policy against the specific section of the standard retrieved from the documents.
     """
     
     # Using temperature 0 is vital here for "Grounding" (sticking to the facts)
@@ -26,23 +25,44 @@ def gap_agent(state: AppState):
     
     prompt = f"""
     You are a Senior ISO Compliance Lead Auditor.
-    
-    AUDIT SCOPE: 
-    
-    INTERNAL REQUIREMENT TO AUDIT:
+
+    You MUST base all conclusions ONLY on the RETRIEVED DOCUMENT EVIDENCE.
+    Do NOT infer beyond the text.
+    Do NOT restate the requirement unless necessary.
+
+    INTERNAL REQUIREMENT:
     "{state.requirement}"
-    
+
     RETRIEVED DOCUMENT EVIDENCE (Source of Truth):
     "{state.evidence}"
-    
+
     TASK:
-    1. Identify the specific Clause ID or Section Number from the RETRIEVED EVIDENCE.
-    2. Evaluate if the Internal Requirement satisfies the standard.
-    3. Provide a 'gap_summary' as a series of brief, factual sentences (no more than 3-4).
-    4. Provide 'recommendation' as specific, actionable steps.
+
+    1. Extract the exact Clause ID or Section Number explicitly mentioned in the RETRIEVED EVIDENCE.
+    - If none is present, return "Not Explicitly Stated".
+
+    2. Determine whether the INTERNAL REQUIREMENT:
+    - Fully Meets
+    - Partially Meets
+    - Does Not Meet
+    the requirement described in the RETRIEVED EVIDENCE.
+
+    3. gap_summary:
+    - Maximum 3 bullet-style sentences.
+    - No introductions.
+    - No conclusions.
+    - No filler language.
+    - State only objective comparison findings.
+
+    4. recommendation:
+    - Bullet-style action steps written as short imperative statements.
+    - No explanation.
+    - No narrative justification.
 
     Return STRICT JSON matching the schema.
+    
     """
+
 
     # Structured output forces the LLM to follow the Pydantic model
     analysis = llm.with_structured_output(GapFinding).invoke(prompt)

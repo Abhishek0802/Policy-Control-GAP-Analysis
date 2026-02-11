@@ -33,26 +33,61 @@ def risk_assessment_agent(state: AppState):
         gap_context = (
             f"\nDetected Gap: {state.gap_summary}\n"
             f"Auditor Severity: {state.gap_severity}\n"
-            f"Auditor Recommendation: {state.gap_recommendation}"
+            f"Auditor Recommendation: {state.gap_recommendation}\n"
+            f"Auditor Source Reference: {state.source_ref}"
         )
     elif state.gap_route == "NO_GAP_HIGH_RISK":
         gap_context = "\nNote: No formal compliance gap identified, but high-risk activity detected."
 
     prompt = f"""
-    You are a Senior Risk Assessment Agent.
-    
-    Requirement: {state.requirement}
-    Evidence: {state.evidence}
+    You are a Senior Technical Risk Assessor.
+
+    Use ONLY the information provided.
+    Do NOT add narrative explanation.
+    Do NOT justify your reasoning.
+    Write in short, clinical statements only.
+
+    Requirement:
+    {state.requirement}
+
+    Evidence:
+    {state.evidence}
     {gap_context}
 
-    TASK:
-    1. Draft a concise Risk Statement (Event -> Consequence).
-    2. Assess Impact and Likelihood based on the evidence provided.
-    3. Determine the final Risk Rating (Low, Medium, High, or Critical).
-    4. Suggest a specific technical Control to mitigate this risk.
+    TASK RULES:
+
+    1. risk_statement:
+    - One sentence only.
+    - Format strictly: "If <event>, then <consequence>."
+    - Maximum 10 words.
+    - No adjectives, no risk commentary.
+
+    2. impact:
+    - Choose: Low | Medium | High
+    - Base ONLY on operational, financial, or regulatory damage.
+
+    3. likelihood:
+    - Choose: Low | Medium | High
+    - Base ONLY on evidence strength and control weakness.
+
+    4. rating:
+    - Use matrix logic:
+        High + High = Critical
+        High + Medium = High
+        Medium + Medium = Medium
+        Anything Low-dominant = Low or Medium
+    - Do NOT explain.
+
+    5. recommended_control:
+    - Maximum 2 short imperative sentences.
+    - Technical action only.
+    - No justification.
+    - No narrative language.
 
     Return STRICT JSON matching the RiskEntry schema.
+    If any field exceeds limits, you are over-analyzing.
     """
+
 
     llm = ChatOpenAI(model=CHAT_MODEL, temperature=0.2)
     # We use the full RiskEntry schema so all state variables get filled
@@ -74,21 +109,27 @@ def risk_materiality_agent(state: AppState):
     Decides if the risk is significant enough for the final report.
     """
     prompt = f"""
-    You are a Risk Materiality Decision Agent. 
-    Review the following risk profile to decide if it should be reported to management.
+    You are a Risk Materiality Decision Engine.
 
-    Risk Profile:
-    - Statement: {state.risk_statement}
-    - Rating: {state.rating}
-    - Impact: {state.impact}
-    - Likelihood: {state.likelihood}
+    Apply the reporting threshold strictly.
 
-    Decision Logic:
-    - KEEP_RISK: If the rating is Medium or higher, or has regulatory/operational impact.
-    - DROP_RISK: If the risk is purely theoretical, low impact, and low likelihood.
+    Risk Rating: {state.rating}
+
+    DECISION RULES:
+
+    KEEP_RISK:
+    - Rating is Medium, High, or Critical
+
+    DROP_RISK:
+    - Rating is Low
+
+    Do NOT re-evaluate impact or likelihood.
+    Do NOT generate analysis.
+    Base the decision ONLY on the rating.
 
     Return STRICT JSON matching the RiskDecision schema.
     """
+
 
     llm = ChatOpenAI(model=CHAT_MODEL, temperature=0) # Zero temp for logical consistency
     decision = llm.with_structured_output(RiskDecision).invoke(prompt)
