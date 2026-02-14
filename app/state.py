@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Dict, Any, Literal, Annotated
 from pydantic import BaseModel, Field
+import operator
 
 # Define strict choices for AI decision-making
 GapRoute = Literal["KEEP_GAP", "DROP_GAP", "NO_GAP_HIGH_RISK"]
-RiskRoute = Literal["KEEP_RISK", "DROP_RISK"]
 SeverityLevel = Literal["Low", "Medium", "High"]
 RiskRating = Literal["Low", "Medium", "High", "Critical"]
 
@@ -20,13 +20,11 @@ class AppState(BaseModel):
     
     # --- 2. TRIAGE DATA (Set by Router Agent) ---
     gap_route: Optional[GapRoute] = None
-    gap_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     gap_reason: Optional[str] = None   # Why the router chose this path
 
     # --- 3. AUDIT FINDINGS (Set by Gap Agent) ---
-    gap_summary: Optional[str] = None  # Explanation of what ISO rule is missing
+    gap_summary: Optional[str] = None  # Explanation of what ISO rule details are missing
     gap_status: Optional[str] = None   # "Fully Meets", "Partially Meets", "Does Not Meet"
-    gap_severity: Optional[SeverityLevel] = None
     gap_recommendation: Optional[str] = None
     source_ref: Optional[str] = None  # Dynamic reference from the PDF (e.g., "ISO 27001 Annex A.8.10")
 
@@ -37,10 +35,5 @@ class AppState(BaseModel):
     rating: Optional[RiskRating] = None
     recommended_control: Optional[str] = None
 
-    # --- 5. FINAL DECISION (Set by Materiality Agent) ---
-    risk_route: Optional[RiskRoute] = None
-    risk_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    risk_reason: Optional[str] = None
-
-    # --- 6. PERSISTENT STORAGE ---
-    audit_log: List[Dict[str, Any]] = [] # Final history of all analyzed clauses
+    # --- 5. PERSISTENT STORAGE ---
+    audit_log: Annotated[List[Dict[str, Any]], operator.add] = []

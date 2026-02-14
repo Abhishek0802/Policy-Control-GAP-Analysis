@@ -117,10 +117,11 @@ def submit_review():
         "theme": item.get("theme"),
         "clause": current_clause,
         "source_ref": out.get("source_ref", "Not Explicitly Stated"),             # Dynamic from Gap Agent
-        "status": out.get("gap_status", "Processing Error"),      # Dynamic from Router
-        "gap_summary": out.get("gap_summary", "Review complete."), # Dynamic from Gap Agent
-        "recommendation": out.get("gap_recommendation", ""),     # Dynamic from Gap Agent
-        "risk_rating": out.get("rating", "N/A")                # Dynamic from Risk Agent
+        "status": out.get("gap_status", "Not Applicable"),      # Dynamic from Router
+        "gap_summary": out.get("gap_summary", "Not Applicable"), # Dynamic from Gap Agent
+        "risk_rating": out.get("rating", "Not Applicable"),               # Dynamic from Risk Agent
+        "risk_statement": out.get("risk_statement", "Not Applicable"),               # Dynamic from Risk Agent
+        "risk_recommendation": out.get("recommended_control", "Not Applicable")     # Dynamic from Risk Agent
         })
         
     return render_template(

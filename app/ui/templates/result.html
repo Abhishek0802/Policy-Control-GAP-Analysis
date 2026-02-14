@@ -11,66 +11,127 @@
             --probe-blue: #0052cc;
             --probe-gold: #ffc107;
             --light-bg: #f4f7f9;
+            --probe-pink: #e83e8c; /* Custom Pink Variable */
         }
         body { background-color: var(--light-bg); font-family: 'Segoe UI', sans-serif; }
         .report-header {
             background: linear-gradient(135deg, var(--probe-navy) 0%, var(--probe-blue) 100%);
-            color: white; padding: 30px 0; border-bottom: 5px solid var(--probe-gold); margin-bottom: 30px;
+            color: white; padding: 25px 0; border-bottom: 5px solid var(--probe-gold); margin-bottom: 20px;
         }
-        .audit-card { background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden; }
-        .iso-ref-badge { background-color: #e7f0ff; color: var(--probe-blue); font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 4px; border: 1px solid #b3d1ff; display: inline-block; }
+        .audit-card { background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow-x: auto; }
+        .table thead { background-color: var(--probe-navy); color: white; vertical-align: middle; }
+        .iso-ref-badge { 
+            background-color: #e7f0ff; color: var(--probe-blue); 
+            font-size: 0.7rem; font-weight: 800; padding: 2px 8px; 
+            border-radius: 4px; border: 1px solid #b3d1ff; 
+        }
+        
+        /* Status Badge Styling */
+        .status-badge { font-size: 0.75rem; padding: 6px 10px; width: 100%; display: block; text-align: center; white-space: normal; font-weight: 600; }
+        .bg-pink { background-color: var(--probe-pink); color: white; } /* Pink Class */
+        
+        .risk-text { font-size: 0.85rem; line-height: 1.5; }
+        
+        /* Bullet point styling */
+        .bullet-list { padding-left: 1.2rem; margin-bottom: 0; list-style-type: disc; }
+        .bullet-list li { margin-bottom: 5px; color: #333; }
+
+        /* Conditional Risk Colors */
+        .rating-critical { color: #dc3545; font-weight: bold; }
+        .rating-high { color: #fd7e14; font-weight: bold; }
+        .rating-med { color: #ffc107; font-weight: bold; }
+        .rating-low { color: #198754; font-weight: bold; }
+        .rating-neutral { color: #333333; font-weight: normal; } 
+        
+        .table td { vertical-align: top; padding: 15px !important; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
 
 <header class="report-header shadow-sm">
-    <div class="container">
+    <div class="container-fluid px-4">
         <h1>PolicyProbe Audit Report</h1>
         <p class="mb-0">Analysis of: <strong>{{ metadata.filename | default('Uploaded Policy') }}</strong></p>
     </div>
 </header>
 
-<main class="container mb-5">
-    <div class="audit-card bg-white p-0">
-        <table class="table table-hover mb-0" style="width: 100%; border-collapse: collapse;">
-            <thead style="background-color: var(--probe-navy); color: white;">
+<main class="container-fluid px-4 mb-5">
+    <div class="audit-card bg-white">
+        <table class="table table-hover mb-0">
+            <thead>
                 <tr>
-                    <th style="padding: 15px; width: 25%;">Requirement & Theme</th>
-                    <th style="padding: 15px; width: 55%;">Gap Analysis & Recommendation</th>
-                    <th style="padding: 15px; width: 20%; text-align: center;">Status & Risk</th>
+                    <th style="width: 10%">Ref & Theme</th>
+                    <th style="width: 20%">Full Clause</th>
+                    <th style="width: 10%">Status</th>
+                    <th style="width: 22%">Gap Summary</th>
+                    <th style="width: 8%">Risk Level</th>
+                    <th style="width: 10%">Risk Statement</th>
+                    <th style="width: 20%">Risk Recommendation</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in results %}
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 20px; vertical-align: top;">
-                        <span class="iso-ref-badge">{{ item.source_ref | default('N/A') }}</span>
-                        <div style="margin-top: 10px; font-weight: 700; color: var(--probe-navy); font-size: 1.1rem;">
-                            {{ item.theme }}
-                        </div>
-                        <div style="font-size: 0.85rem; color: #666; font-style: italic; margin-top: 8px; border-left: 2px solid #ddd; padding-left: 10px;">
-                            "{{ item.clause }}"
+                {% set s_lower = item.status | lower %}
+                {% set is_disabled = 'out of scope' in s_lower or 'not applicable' in s_lower %}
+                
+                <tr>
+                    <td>
+                        <span class="iso-ref-badge mb-1">{{ item.source_ref }}</span>
+                        <div class="fw-bold" style="font-size: 0.9rem; color: var(--probe-navy);">{{ item.theme }}</div>
+                    </td>
+
+                    <td>
+                        <div class="text-muted" style="font-size: 0.85rem; border-left: 3px solid #dee2e6; padding-left: 10px;">
+                            {{ item.clause }}
                         </div>
                     </td>
 
-                    <td style="padding: 20px; vertical-align: top;">
-                        <div style="margin-bottom: 15px;">
-                            <strong style="color: #d9534f; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Finding:</strong>
-                            <p style="font-size: 0.95rem; line-height: 1.5; color: #333; white-space: pre-line;">{{ item.gap_summary }}</p>
-                        </div>
-                        
-                        {% if item.recommendation %}
-                        <div style="background: #fff9e6; padding: 15px; border-radius: 8px; border: 1px dashed var(--probe-gold);">
-                            <strong style="color: #856404; font-size: 0.85rem;">RECOVERY PLAN:</strong>
-                            <p style="font-size: 0.95rem; margin-bottom: 0; white-space: pre-line;">{{ item.recommendation }}</p>
-                        </div>
-                        {% endif %} 
-                    </td>
-
-                    <td style="padding: 20px; vertical-align: middle; text-align: center;">
-                        <span class="badge {% if item.status == 'Compliant' %}bg-success{% else %}bg-danger{% endif %}">
-                            {{ item.status | default('Gap Detected') }}
+                    <td>
+                        <span class="badge status-badge 
+                            {% if 'fully meets' in s_lower %}bg-success
+                            {% elif 'compliant but risky' in s_lower or 'risky' in s_lower %}bg-pink
+                            {% elif 'partially meets' in s_lower %}bg-warning text-dark
+                            {% elif 'does not meet' in s_lower %}bg-danger
+                            {% elif is_disabled %}bg-dark
+                            {% else %}bg-secondary{% endif %}">
+                            {{ item.status }}
                         </span>
+                    </td>
+
+                    <td class="risk-text">
+                        <ul class="bullet-list">
+                        {% set g_points = item.gap_summary.split('\n') %}
+                        {% for g_point in g_points %}
+                            {% if g_point.strip() %}
+                                <li>{{ g_point.strip().lstrip('-').lstrip('•').lstrip('*') }}</li>
+                            {% endif %}
+                        {% endfor %}
+                        </ul>
+                    </td>
+
+                    <td class="text-center">
+                        {% if is_disabled %}
+                            <span class="rating-neutral">{{ item.risk_rating }}</span>
+                        {% else %}
+                            <span class="{% if item.risk_rating in ['Critical', 'High'] %}rating-critical{% elif item.risk_rating == 'Medium' %}rating-med{% else %}rating-low{% endif %}">
+                                {{ item.risk_rating }}
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="risk-text fst-italic {% if is_disabled %}text-dark{% else %}text-danger{% endif %}">
+                        {{ item.risk_statement }}
+                    </td>
+
+                    <td class="risk-text fw-semibold" style="background-color: #f8f9ff; border-left: 3px solid var(--probe-blue);">
+                        <ul class="bullet-list">
+                        {% set r_points = item.risk_recommendation.split('\n') %}
+                        {% for r_point in r_points %}
+                            {% if r_point.strip() %}
+                                <li>{{ r_point.strip().lstrip('-').lstrip('•').lstrip('*') }}</li>
+                            {% endif %}
+                        {% endfor %}
+                        </ul>
                     </td>
                 </tr>
                 {% endfor %}

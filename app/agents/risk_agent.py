@@ -7,20 +7,11 @@ from app.state import AppState
 # --- SCHEMAS ---
 
 class RiskEntry(BaseModel):
-    """Schema for Agent 3: Generating the technical risk profile."""
     risk_statement: str
     impact: Literal["Low", "Medium", "High"]
     likelihood: Literal["Low", "Medium", "High"]
     rating: Literal["Low", "Medium", "High", "Critical"]
     recommended_control: str
-
-class RiskDecision(BaseModel):
-    """Schema for Agent 4: The final materiality sign-off."""
-    route: Literal["KEEP_RISK", "DROP_RISK"]
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    reason: str
-
-# --- AGENTS ---
 
 def risk_assessment_agent(state: AppState):
     """
@@ -31,10 +22,10 @@ def risk_assessment_agent(state: AppState):
     gap_context = ""
     if state.gap_route == "KEEP_GAP":
         gap_context = (
-            f"\nDetected Gap: {state.gap_summary}\n"
-            f"Auditor Severity: {state.gap_severity}\n"
-            f"Auditor Recommendation: {state.gap_recommendation}\n"
-            f"Auditor Source Reference: {state.source_ref}"
+            f"\n Detected Gap: {state.gap_summary}\n"
+            f"\n Gap Status: {state.gap_status}\n"
+            f"\n Auditor Recommendation: {state.gap_recommendation}\n"
+            f"\n Auditor Source Reference: {state.source_ref}"
         )
     elif state.gap_route == "NO_GAP_HIGH_RISK":
         gap_context = "\nNote: No formal compliance gap identified, but high-risk activity detected."
@@ -59,7 +50,7 @@ def risk_assessment_agent(state: AppState):
     1. risk_statement:
     - One sentence only.
     - Format strictly: "If <event>, then <consequence>."
-    - Maximum 10 words.
+    - Maximum 20 words.
     - No adjectives, no risk commentary.
 
     2. impact:
@@ -75,11 +66,11 @@ def risk_assessment_agent(state: AppState):
         High + High = Critical
         High + Medium = High
         Medium + Medium = Medium
-        Anything Low-dominant = Low or Medium
+        Anything Low-dominant = Low 
     - Do NOT explain.
 
     5. recommended_control:
-    - Maximum 2 short imperative sentences.
+    - Maximum 2 short bullet-type imperative sentences
     - Technical action only.
     - No justification.
     - No narrative language.
@@ -99,43 +90,5 @@ def risk_assessment_agent(state: AppState):
     state.likelihood = risk.likelihood
     state.rating = risk.rating
     state.recommended_control = risk.recommended_control
-    
-    return state
-
-
-def risk_materiality_agent(state: AppState):
-    """
-    Agent 4: Chief Risk Officer (Materiality).
-    Decides if the risk is significant enough for the final report.
-    """
-    prompt = f"""
-    You are a Risk Materiality Decision Engine.
-
-    Apply the reporting threshold strictly.
-
-    Risk Rating: {state.rating}
-
-    DECISION RULES:
-
-    KEEP_RISK:
-    - Rating is Medium, High, or Critical
-
-    DROP_RISK:
-    - Rating is Low
-
-    Do NOT re-evaluate impact or likelihood.
-    Do NOT generate analysis.
-    Base the decision ONLY on the rating.
-
-    Return STRICT JSON matching the RiskDecision schema.
-    """
-
-
-    llm = ChatOpenAI(model=CHAT_MODEL, temperature=0) # Zero temp for logical consistency
-    decision = llm.with_structured_output(RiskDecision).invoke(prompt)
-
-    state.risk_route = decision.route
-    state.risk_confidence = decision.confidence
-    state.risk_reason = decision.reason
     
     return state
